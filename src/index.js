@@ -1,5 +1,6 @@
 import { loadTickets, addTicket, editTicket } from "./js/api.js";
 import { openModal, closeModal } from "./js/handlers.js";
+import "./css/style.css";
 
 document.addEventListener("DOMContentLoaded", () => {
   const addTicketButton = document.getElementById("addTicketButton");
