@@ -1,0 +1,271 @@
+/******/ (() => { // webpackBootstrap
+/******/ 	"use strict";
+var __webpack_exports__ = {};
+
+;// CONCATENATED MODULE: ./src/js/handlers.js
+
+function displayTickets(tickets) {
+  const taskList = document.getElementById("taskList");
+  taskList.innerHTML = "";
+  tickets.forEach(ticket => {
+    const taskItem = document.createElement("div");
+    taskItem.classList.add("tasks__item");
+    const checkboxLabel = document.createElement("label");
+    checkboxLabel.classList.add("container");
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.checked = ticket.status; // устанавливаем статус чекбокса (булевое значение поля 'статус' тикета на сервере)
+    checkbox.dataset.ticketId = ticket.id;
+    checkbox.addEventListener("change", () => {
+      const ticketId = checkbox.dataset.ticketId;
+      const isChecked = checkbox.checked;
+      console.log(isChecked);
+      updateTicketStatus(ticketId, isChecked);
+    });
+    const checkmark = document.createElement("span");
+    checkmark.classList.add("checkmark");
+    checkboxLabel.appendChild(checkbox);
+    checkboxLabel.appendChild(checkmark);
+    const taskItemMessage = document.createElement("div");
+    taskItemMessage.classList.add("task__item-message");
+    const shortDescription = document.createElement("p");
+    shortDescription.textContent = ticket.name;
+    taskItemMessage.appendChild(shortDescription);
+
+    // добавляем event listener для отображения full description
+    taskItemMessage.addEventListener("click", event => {
+      showFullDescription(event, ticket);
+    });
+    const dateTime = document.createElement("div");
+    dateTime.classList.add("date-time");
+    const date = new Date(ticket.created);
+    dateTime.textContent = date.toLocaleString();
+    const taskItemEdit = document.createElement("div");
+    taskItemEdit.classList.add("task__item-edit");
+    const editLink = document.createElement("a");
+    const editIcon = document.createElement("span");
+    editIcon.classList.add("material-symbols-outlined");
+    editIcon.textContent = "draft_orders";
+    editLink.appendChild(editIcon);
+    taskItemEdit.appendChild(editLink);
+    editLink.addEventListener("click", () => {
+      openEditModal(ticket);
+    });
+    const taskItemCancel = document.createElement("div");
+    taskItemCancel.classList.add("task__item-cancel");
+    const cancelLink = document.createElement("a");
+    const cancelIcon = document.createElement("span");
+    cancelIcon.classList.add("material-symbols-outlined");
+    cancelIcon.textContent = "cancel";
+    cancelLink.appendChild(cancelIcon);
+    taskItemCancel.appendChild(cancelLink);
+    cancelLink.addEventListener("click", () => {
+      openDeleteModal(ticket.id);
+      console.log(ticket.id);
+    });
+    taskItem.appendChild(checkboxLabel);
+    taskItem.appendChild(taskItemMessage);
+    taskItem.appendChild(dateTime);
+    taskItem.appendChild(taskItemEdit);
+    taskItem.appendChild(taskItemCancel);
+    taskList.appendChild(taskItem);
+  });
+}
+function showFullDescription(event, ticket) {
+  console.log(ticket);
+  const taskItemMessage = event.currentTarget;
+
+  // Check if the modalFullDescription already exists
+  let modalFullDescription = taskItemMessage.querySelector("#modalFullDescription");
+  if (modalFullDescription) {
+    // Remove the modalFullDescription if it exists
+    modalFullDescription.remove();
+    return;
+  }
+
+  // создаем элемент в котором будет отражено полное содержание тикета
+  modalFullDescription = document.createElement("div");
+  modalFullDescription.id = "modalFullDescription";
+  modalFullDescription.textContent = ticket.description;
+  console.log("modalFullDescription content is", modalFullDescription.textContent);
+
+  // втавляем эл-т с полным содержанием тикета в качестве потомка taskItemMessage
+  const shortDescription = taskItemMessage.querySelector("p");
+  if (shortDescription) {
+    shortDescription.insertAdjacentElement("afterend", modalFullDescription);
+  } else {
+    taskItemMessage.appendChild(modalFullDescription);
+  }
+  console.log(modalFullDescription);
+}
+function openModal() {
+  const modal = document.getElementById("modal");
+  const shortDescriptionInput = document.getElementById("shortDescription");
+  const fullDescriptionInput = document.getElementById("fullDescription");
+  const editTicketIdInput = document.getElementById("editTicketId");
+  modal.style.display = "block";
+
+  // Сброс полей формы
+  shortDescriptionInput.value = "";
+  fullDescriptionInput.value = "";
+  editTicketIdInput.value = "";
+}
+function closeModal() {
+  const modal = document.getElementById("modal");
+  modal.style.display = "none";
+}
+function openEditModal(ticket) {
+  const modal = document.getElementById("modal");
+  modal.style.display = "block";
+  const shortDescriptionInput = document.getElementById("shortDescription");
+  const fullDescriptionInput = document.getElementById("fullDescription");
+  const editTicketIdInput = document.getElementById("editTicketId");
+  shortDescriptionInput.value = ticket.name;
+  fullDescriptionInput.textContent = ticket.description;
+  editTicketIdInput.value = ticket.id;
+}
+function openDeleteModal(ticketId) {
+  const deleteModal = document.getElementById("deleteModal");
+  console.log(deleteModal);
+  deleteModal.style.display = "block";
+  const deleteCancelButton = document.getElementById("delete_cancelButton");
+  const deleteOkButton = document.getElementById("delete_okButton");
+  deleteCancelButton.addEventListener("click", closeDeleteModal);
+  deleteOkButton.addEventListener("click", function () {
+    deleteTicket(ticketId);
+    closeDeleteModal();
+  });
+}
+function closeDeleteModal() {
+  const deleteModal = document.getElementById("deleteModal");
+  deleteModal.style.display = "none";
+}
+;// CONCATENATED MODULE: ./src/js/api.js
+
+function loadTickets() {
+  const xhr = new XMLHttpRequest();
+  xhr.open("GET", "http://localhost:7070/?method=allTickets");
+  xhr.addEventListener("load", () => {
+    if (xhr.status >= 200 && xhr.status < 300) {
+      try {
+        const tickets = JSON.parse(xhr.responseText);
+        displayTickets(tickets);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  });
+  xhr.send();
+}
+function addTicket(shortDescription, fullDescription) {
+  const xhr = new XMLHttpRequest();
+  xhr.open("POST", "http://localhost:7070/?method=createTicket");
+  xhr.setRequestHeader("Content-Type", "application/json");
+  xhr.addEventListener("load", () => {
+    if (xhr.status >= 200 && xhr.status < 300) {
+      try {
+        const ticket = JSON.parse(xhr.responseText);
+        loadTickets();
+        closeModal();
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  });
+  const newTicket = {
+    name: shortDescription,
+    description: fullDescription,
+    status: false
+  };
+  xhr.send(JSON.stringify(newTicket));
+}
+function updateTicketStatus(ticketId, isChecked) {
+  const xhr = new XMLHttpRequest();
+  xhr.open("PUT", `http://localhost:7070/?method=checkTicket&ticketId=${ticketId}`);
+  xhr.setRequestHeader("Content-Type", "application/json");
+  xhr.addEventListener("load", () => {
+    if (xhr.status >= 200 && xhr.status < 300) {
+      try {
+        const updatedTicket = JSON.parse(xhr.responseText);
+        console.log("Ticket status updated:", updatedTicket);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  });
+  const updatedTicket = {
+    id: ticketId,
+    status: isChecked // используем обновленное состояние чекбокса в качестве булевого значения
+  };
+
+  xhr.send(JSON.stringify(updatedTicket));
+}
+function deleteTicket(ticketId) {
+  const xhr = new XMLHttpRequest();
+  xhr.open("DELETE", `http://localhost:7070/?method=deleteTicket&deleteId=${ticketId}`);
+  xhr.addEventListener("load", () => {
+    if (xhr.status >= 200 && xhr.status < 300) {
+      try {
+        const deletedTicket = JSON.parse(xhr.responseText);
+        console.log("Ticket deleted:", deletedTicket);
+        loadTickets(); // Обновляем список тикетов после удаления
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  });
+  xhr.send();
+}
+function editTicket(ticketId, shortDescription, fullDescription) {
+  const xhr = new XMLHttpRequest();
+  xhr.open("PUT", `http://localhost:7070/?method=updateTicket&editTicketId=${ticketId}`);
+  xhr.setRequestHeader("Content-Type", "application/json");
+  xhr.addEventListener("load", () => {
+    if (xhr.status >= 200 && xhr.status < 300) {
+      try {
+        const editedTicket = JSON.parse(xhr.responseText);
+        console.log("Ticket edited:", editedTicket);
+        loadTickets(); // обновляем список тикетов после редактирования
+        closeModal();
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  });
+  const editedTicket = {
+    id: ticketId,
+    name: shortDescription,
+    description: fullDescription,
+    status: false
+  };
+  xhr.send(JSON.stringify(editedTicket));
+}
+;// CONCATENATED MODULE: ./src/index.js
+
+
+
+document.addEventListener("DOMContentLoaded", () => {
+  const addTicketButton = document.getElementById("addTicketButton");
+  const cancelButton = document.getElementById("cancelButton");
+  const ticketForm = document.getElementById("ticketForm");
+  addTicketButton.addEventListener("click", openModal);
+  cancelButton.addEventListener("click", closeModal);
+  ticketForm.addEventListener("submit", event => {
+    event.preventDefault();
+    const shortDescriptionInput = document.getElementById("shortDescription");
+    const fullDescriptionInput = document.getElementById("fullDescription");
+    const editTicketIdInput = document.getElementById("editTicketId");
+    if (editTicketIdInput.value) {
+      // Если editTicketIdInput не пустой, вызываем editTicket
+      const editedTicketId = editTicketIdInput.value;
+      editTicket(editedTicketId, shortDescriptionInput.value, fullDescriptionInput.value);
+    } else {
+      // Если editTicketIdInput пустой, вызываем addTicket
+      addTicket(shortDescriptionInput.value, fullDescriptionInput.value);
+    }
+    closeModal();
+  });
+  loadTickets();
+});
+/******/ })()
+;
